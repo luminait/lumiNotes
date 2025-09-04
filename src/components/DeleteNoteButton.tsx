@@ -2,7 +2,7 @@
 
 
 import {Button} from "@/components/ui/button";
-import {Note} from "@/prisma/client";
+import {Note} from "../app/generated/prisma";
 import {
     AlertDialog, AlertDialogAction,
     AlertDialogCancel,

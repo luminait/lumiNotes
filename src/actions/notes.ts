@@ -3,7 +3,7 @@
 import {getUser} from "@/auth/server";
 import {prisma} from "@/db/prisma";
 import {handleError} from "@/lib/utils";
-import {ChatCompletionMessageParam} from "openai/client";
+import { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 import openai from "@/openai";
 
 export const updateNoteAction = async (noteId: string, text: string) => {
