@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "pnpm dlx prisma generate && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "migrate": "pnpm dlx prisma generate && env $(cat .env.local | xargs) pnpm dlx prisma migrate dev"
