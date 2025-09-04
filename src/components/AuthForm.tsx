@@ -47,7 +47,10 @@ const AuthForm = ({type}: Props) => {
                 toast.success(successTitle, {
                     description: successDescription,
                 })
-                router.push("/");
+                // A hard navigation is required after login/signup to ensure the new
+                // session cookie is sent to the server for the next page render.
+                // Using router.push("/") can cause a race condition.
+                window.location.assign("/");
             } else {
                 toast.error(errorTitle, {
                     description: result.errorMessage,
