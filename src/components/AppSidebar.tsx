@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar"
 import SidebarGroupContent from "@/components/SidebarGroupContent";
 import {getUser} from "@/auth/server";
-import {Note} from "@/app/generated/prisma";
+import {Note} from "@/prisma/client";
 import {prisma} from "@/db/prisma";
 import Link from "next/link";
 

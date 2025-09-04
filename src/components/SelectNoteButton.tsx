@@ -1,5 +1,5 @@
 'use client'
-import {Note} from "@/app/generated/prisma";
+import {Note} from "@/prisma/client";
 import {useSearchParams} from "next/navigation";
 import useNote from "@/hooks/useNote";
 import {useEffect, useState} from "react";

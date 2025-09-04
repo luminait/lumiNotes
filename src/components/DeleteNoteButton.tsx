@@ -2,7 +2,7 @@
 
 
 import {Button} from "@/components/ui/button";
-import {Note} from "@/app/generated/prisma";
+import {Note} from "@/prisma/client";
 import {
     AlertDialog, AlertDialogAction,
     AlertDialogCancel,
@@ -10,7 +10,7 @@ import {
     AlertDialogHeader, AlertDialogTitle,
     AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import {Loader2, Trash2, Trash2Icon, TrashIcon} from "lucide-react";
+import {Loader2, Trash2} from "lucide-react";
 import {useTransition} from "react";
 import {createNoteAction, deleteNoteAction, updateNoteAction} from "@/actions/notes";
 import {useRouter, useSearchParams} from "next/navigation";
