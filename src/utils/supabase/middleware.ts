@@ -3,10 +3,8 @@ import {NextResponse, type NextRequest} from 'next/server'
 
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
-        request: { headers: request.headers },
-    })
-
-    console.log("middleware updateSession called");
+        request,
+    });
 
     const supabase = createServerClient(
         process.env.SUPABASE_URL!,
@@ -14,60 +12,70 @@ export async function updateSession(request: NextRequest) {
         {
             cookies: {
                 getAll() {
-                    return request.cookies.getAll()
+                    return request.cookies.getAll();
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({name, value, options}) => request.cookies.set(name, value))
+                    cookiesToSet.forEach(({ name, value }) =>
+                        request.cookies.set(name, value),
+                    );
                     supabaseResponse = NextResponse.next({
-                        request: { headers: request.headers },
-                    })
-                    cookiesToSet.forEach(({name, value, options}) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    )
+                        request,
+                    });
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        supabaseResponse.cookies.set(name, value, options),
+                    );
                 },
             },
-        }
-    )
+        },
+    );
 
-    // Fetch the user ONCE and reuse to avoid multiple session touches
-    let user = null as null | { id: string };
-    try {
-        const {
-            data: { user: u },
-        } = await supabase.auth.getUser()
-        user = u as any
-    } catch (e) {
-        // swallow to avoid noisy edge errors; unauthenticated is fine
-    }
-
-    // If the user is logged in, they can't go to the login or signup page
     const isAuthRoute =
-        request.nextUrl.pathname.startsWith('/login') ||
-        request.nextUrl.pathname.startsWith('/signup');
+        request.nextUrl.pathname === "/login" ||
+        request.nextUrl.pathname === "/sign-up";
 
-    if (isAuthRoute && user) {
-        const url = new URL('/', request.url)
-        const redirectResponse = NextResponse.redirect(url)
-        // copy over cookies to keep session in sync
-        redirectResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-        return redirectResponse
+    if (isAuthRoute) {
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+            return NextResponse.redirect(
+                new URL("/", process.env.NEXT_PUBLIC_BASE_URL),
+            );
+        }
     }
 
-    // Avoid doing internal fetches in middleware (hard to forward cookies reliably on Edge)
-    // The app/page.tsx will handle picking/creating the appropriate note after render.
+    const { searchParams, pathname } = new URL(request.url);
 
-    // IMPORTANT: You *must* return the supabaseResponse object as it is.
-    // If you're creating a new response object with NextResponse.next() make sure to:
-    // 1. Pass the request in it, like so:
-    //    const myNewResponse = NextResponse.next({ request })
-    // 2. Copy over the cookies, like so:
-    //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-    // 3. Change the myNewResponse object to fit your needs, but avoid changing
-    //    the cookies!
-    // 4. Finally:
-    //    return myNewResponse
-    // If this is not done, you may be causing the browser and server to go out
-    // of sync and terminate the user's session prematurely!
+    if (!searchParams.get("noteId") && pathname === "/") {
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
 
-    return supabaseResponse
+        if (user) {
+            const { newestNoteId } = await fetch(
+                `${process.env.NEXT_PUBLIC_BASE_URL}/api/fetch-newest-note?userId=${user.id}`,
+            ).then((res) => res.json());
+
+            if (newestNoteId) {
+                const url = request.nextUrl.clone();
+                url.searchParams.set("noteId", newestNoteId);
+                return NextResponse.redirect(url);
+            } else {
+                const { noteId } = await fetch(
+                    `${process.env.NEXT_PUBLIC_BASE_URL}/api/create-new-note?userId=${user.id}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    },
+                ).then((res) => res.json());
+                const url = request.nextUrl.clone();
+                url.searchParams.set("noteId", noteId);
+                return NextResponse.redirect(url);
+            }
+        }
+    }
+
+    return supabaseResponse;
 }
