@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "pnpm dlx prisma generate && next build --turbopack",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "migrate": "pnpm dlx prisma generate && env $(cat .env.local | xargs) pnpm dlx prisma migrate dev"
   },
   "dependencies": {
