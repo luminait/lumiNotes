@@ -7,7 +7,8 @@
     "build": "pnpm dlx prisma generate --schema=src/db/schema.prisma && next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate": "pnpm dlx prisma generate --schema=src/db/schema.prisma && env $(cat .env.local | xargs) pnpm dlx prisma migrate dev --schema=src/db/schema.prisma"
+    "migrate": "pnpm dlx prisma generate --schema=src/db/schema.prisma && env $(cat .env.local | xargs) pnpm dlx prisma migrate dev --schema=src/db/schema.prisma",
+    "postinstall": "pnpm dlx prisma generate --schema=src/db/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
