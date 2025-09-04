@@ -24,7 +24,7 @@ const SidebarGroupContent = ({notes}: Props) => {
 
     const fuse = useMemo(() => {
         return new Fuse(localNotes, {
-            keys: ["title"],
+            keys: ["text"],
             threshold: 0.4,
         });
     }, [localNotes]);

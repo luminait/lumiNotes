@@ -1,0 +1,5 @@
+node_modules
+.next
+
+# Ignore generated prisma client
+src/app/generated/prisma
