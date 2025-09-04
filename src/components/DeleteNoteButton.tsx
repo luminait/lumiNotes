@@ -29,38 +29,46 @@ const DeleteNoteButton = ({note, deleteNoteLocally}: Props) => {
 
     const [isPending, startTransition] = useTransition();
 
-    function handleDeleteNote() {
-        if (note) {
-            deleteNoteLocally(noteId);
-        }
-        route.push(
-            `/?toastType=deleteNote&noteId=${noteId}`
-        )
+    const handleDeleteNote = () => {
         startTransition(async () => {
+            // 1. Optimistically update the UI by removing the note.
+            deleteNoteLocally(noteId);
+
+            // 2. If the deleted note was the one being viewed, navigate away.
+            if (noteIdParam === noteId) {
+                // Using replace so the user can't navigate "back" to the deleted note.
+                route.replace("/");
+            }
+
+            // 3. Call the server action to delete from the database.
             const {errorMessage} = await deleteNoteAction(noteId);
 
+            // 4. Handle the result.
             if (!errorMessage) {
+                // If successful, show a toast with an "Undo" action.
                 toast.success("Note deleted successfully", {
                     action: {
                         label: "Undo",
-                        onClick: () => {
-                            createNoteAction(noteId).then((note) => {
-                                updateNoteAction(noteId, noteText)
-                            });
+                        onClick: async () => {
+                            // Restore the note in the DB. This assumes the actions work
+                            // as intended (recreate with ID, then update with text).
+                            await createNoteAction(noteId);
+                            await updateNoteAction(noteId, noteText);
+
+                            // This is the missing piece: refresh server data to update the UI.
+                            route.refresh();
+                            toast.info("Note restored.");
                         }
                     }
-                })
-
-                deleteNoteLocally(noteId);
-
-                if (noteIdParam === noteId) {
-                    route.replace("/");
-                }
+                });
             } else {
+                // If the delete failed, show an error and revert the optimistic UI update
+                // by refreshing the data from the source of truth (the DB).
                 toast.error(errorMessage);
+                route.refresh();
             }
-        })
-    }
+        });
+    };
 
     return (
         <AlertDialog>

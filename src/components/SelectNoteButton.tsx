@@ -1,54 +1,42 @@
 'use client'
-import {Button} from "@/components/ui/button";
 import {Note} from "@/app/generated/prisma";
 import {useSearchParams} from "next/navigation";
 import useNote from "@/hooks/useNote";
 import {useEffect, useState} from "react";
 import {SidebarMenuButton} from "@/components/ui/sidebar";
 import Link from "next/link";
+import {cn} from "@/lib/utils";
 
 type Props = {
     note: Note;
 };
 
 const SelectNoteButton = ({note} : Props) => {
-    const noteId = useSearchParams().get("noteId") || "";
-
+    const noteIdParam = useSearchParams().get("noteId");
     const {noteText: selectedNoteText} = useNote();
-    const [shouldUseGlobalNoteText, setShouldUseGlobalNoteText] = useState(false);
     const [localNoteText, setLocalNoteText] = useState(note.text);
 
-    useEffect(() => {
-        if (noteId === note.id) {
-            setShouldUseGlobalNoteText(true);
-        } else {
-            setShouldUseGlobalNoteText(false);
-        }
-    }, [noteId, note.id]);
+    const isSelected = noteIdParam === note.id;
 
     useEffect(() => {
-        if (shouldUseGlobalNoteText) {
+        // When this note is selected, sync its local text state
+        // with the global state from the main editor.
+        if (isSelected) {
             setLocalNoteText(selectedNoteText);
         }
-    }, [selectedNoteText, shouldUseGlobalNoteText]);
-
-    const blankNoteText = "EMPTY NOTE";
-
-    let noteText = note.text || blankNoteText;
-
-    if (shouldUseGlobalNoteText) {
-        noteText = selectedNoteText || blankNoteText;
-    }
-
+    }, [isSelected, selectedNoteText]);
 
     return (
         <SidebarMenuButton
             asChild
-            className={`items-start gap-0 pr-12 ${note.id === noteId && "bg-sidebar-accent/50"} group/item`}
+            className={cn(
+                "items-start gap-0 pr-12 group/item",
+                isSelected && "bg-sidebar-accent/50"
+            )}
         >
             <Link href={`/?noteId=${note.id}`} className={"flex h-fit flex-col"}>
                 <p className={"w-full overflow-hidden truncate text-ellipsis whitespace-nowrap"}>
-                    {noteText}
+                    {localNoteText || "EMPTY NOTE"}
                 </p>
                 <p className={"text-xs text-muted-foreground"}>{note.updatedAt.toLocaleString()}</p>
             </Link>
