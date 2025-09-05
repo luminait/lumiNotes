@@ -4,9 +4,7 @@ import {NextResponse, type NextRequest} from 'next/server'
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
-    })
-
-    console.log("middleware updateSession called");
+    });
 
     const supabase = createServerClient(
         process.env.SUPABASE_URL!,
