@@ -29,53 +29,33 @@ export async function updateSession(request: NextRequest) {
         },
     );
 
+    // Fetch the user ONCE and reuse to avoid multiple session touches
+    let user: { id: string } | null = null;
+    try {
+        const { data: { user: u } } = await supabase.auth.getUser();
+        user = (u as any) || null;
+    } catch {
+        // ignore - unauthenticated or transient cookie desync
+    }
+
+    // If the user is logged in, they can't go to the login or signup page
     const isAuthRoute =
-        request.nextUrl.pathname === "/login" ||
-        request.nextUrl.pathname === "/sign-up";
+        request.nextUrl.pathname.startsWith('/login') ||
+        request.nextUrl.pathname.startsWith('/signup') ||
+        request.nextUrl.pathname.startsWith('/sign-up');
 
-    if (isAuthRoute) {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-            return NextResponse.redirect(
-                new URL("/", process.env.NEXT_PUBLIC_BASE_URL),
-            );
+    if (isAuthRoute && user) {
+        // Build redirect relative to current request origin to avoid base URL issues
+        const url = new URL('/', request.url);
+        const redirectResponse = NextResponse.redirect(url);
+        // Copy cookies from the Supabase bridge to keep session in sync on Edge
+        for (const c of supabaseResponse.cookies.getAll()) {
+            redirectResponse.cookies.set(c);
         }
+        return redirectResponse;
     }
 
-    const { searchParams, pathname } = new URL(request.url);
-
-    if (!searchParams.get("noteId") && pathname === "/") {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-            const { newestNoteId } = await fetch(
-                `${process.env.NEXT_PUBLIC_BASE_URL}/api/fetch-newest-note?userId=${user.id}`,
-            ).then((res) => res.json());
-
-            if (newestNoteId) {
-                const url = request.nextUrl.clone();
-                url.searchParams.set("noteId", newestNoteId);
-                return NextResponse.redirect(url);
-            } else {
-                const { noteId } = await fetch(
-                    `${process.env.NEXT_PUBLIC_BASE_URL}/api/create-new-note?userId=${user.id}`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    },
-                ).then((res) => res.json());
-                const url = request.nextUrl.clone();
-                url.searchParams.set("noteId", noteId);
-                return NextResponse.redirect(url);
-            }
-        }
-    }
+    // Avoid note routing logic in middleware; let the page handle note selection/creation
 
     return supabaseResponse;
 }
