@@ -18,6 +18,7 @@ const eslintConfig = [
             "out/**",
             "build/**",
             "next-env.d.ts",
+            'prisma/',
         ],
         rules: {
             "react/no-unescaped-entities": "off",
@@ -27,7 +28,6 @@ const eslintConfig = [
             "@typescript-eslint/no-require-imports": "off",
 
         },
-        ignorePatterns: ['prisma/'],
     },
 ];
 
