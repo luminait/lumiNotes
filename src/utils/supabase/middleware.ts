@@ -36,6 +36,7 @@ export async function updateSession(request: NextRequest) {
         user = (u as any) || null;
     } catch {
         // ignore - unauthenticated or transient cookie desync
+        console.warn('Failed to fetch user');
     }
 
     // If the user is logged in, they can't go to the login or signup page
