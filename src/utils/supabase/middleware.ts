@@ -3,7 +3,7 @@ import {NextResponse, type NextRequest} from 'next/server'
 
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
-        request,
+        request: { headers: request.headers },
     })
 
     console.log("middleware updateSession called");
@@ -19,7 +19,7 @@ export async function updateSession(request: NextRequest) {
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({name, value, options}) => request.cookies.set(name, value))
                     supabaseResponse = NextResponse.next({
-                        request,
+                        request: { headers: request.headers },
                     })
                     cookiesToSet.forEach(({name, value, options}) =>
                         supabaseResponse.cookies.set(name, value, options)
@@ -29,65 +29,32 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
+    // Fetch the user ONCE and reuse to avoid multiple session touches
+    let user = null as null | { id: string };
+    try {
+        const {
+            data: { user: u },
+        } = await supabase.auth.getUser()
+        user = u as any
+    } catch (e) {
+        // swallow to avoid noisy edge errors; unauthenticated is fine
+    }
+
     // If the user is logged in, they can't go to the login or signup page
     const isAuthRoute =
         request.nextUrl.pathname.startsWith('/login') ||
         request.nextUrl.pathname.startsWith('/signup');
 
-    if (isAuthRoute) {
-        const {
-            data: {user},
-        } = await supabase.auth.getUser()
-
-        if (user) {
-            return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_BASE_URL!))
-        }
+    if (isAuthRoute && user) {
+        const url = new URL('/', request.url)
+        const redirectResponse = NextResponse.redirect(url)
+        // copy over cookies to keep session in sync
+        redirectResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+        return redirectResponse
     }
 
-    // If the URL has no noteId, try to go to the user's most recent note.
-    // If the user has no notes, redirect to the 'Create Note' page.
-    const {searchParams, pathname} = new URL(request.url);
-    if (!searchParams.get('noteId') && pathname === '/') {
-        const {
-            data: {user},
-        } = await supabase.auth.getUser()
-
-
-        if (user) {
-            const {newestNoteId} =
-                await fetch(`${process.env.NEXT_PUBLIC_BASE_URL!}/api/fetch-newest-note?userId=${user.id}`)
-                .then((res) => res.json());
-
-            if (newestNoteId) {
-                const url = request.nextUrl.clone();
-                url.searchParams.set('noteId', newestNoteId);
-                return NextResponse.redirect(url);
-            } else {
-                const noteId =
-                    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL!}/api/create-new-note?userId=${user.id}`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    }).then((res) => res.json());
-                const url = request.nextUrl.clone();
-                url.searchParams.set('noteId', noteId);
-                return NextResponse.redirect(url);
-
-            }
-        }
-    }
-
-    // Do not run code between createServerClient and
-    // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-    // issues with users being randomly logged out.
-
-    // IMPORTANT: DO NOT REMOVE auth.getUser()
-
-    const {
-        data: {user},
-    } = await supabase.auth.getUser()
-
+    // Avoid doing internal fetches in middleware (hard to forward cookies reliably on Edge)
+    // The app/page.tsx will handle picking/creating the appropriate note after render.
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is.
     // If you're creating a new response object with NextResponse.next() make sure to:

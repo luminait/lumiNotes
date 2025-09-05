@@ -16,12 +16,16 @@ const HomePage = async ({searchParams}: Props) => {
         ? noteIdParam![0]
         : noteIdParam || "";
 
-    const note = await prisma.note.findUnique({
-        where: {
-            id: noteId,
-            authorId: user?.id,
-        }
-    });
+    // Only query the database when we have both a user and a concrete noteId
+    let note: { text: string } | null = null;
+    if (user && noteId) {
+        note = await prisma.note.findUnique({
+            where: {
+                id: noteId,
+                authorId: user.id,
+            }
+        });
+    }
 
     return (
         <div className={"flex h-full flex-col items-center gap-4"}>
